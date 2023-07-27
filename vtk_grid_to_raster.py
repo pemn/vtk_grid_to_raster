@@ -1,19 +1,21 @@
 #python
-# create a georeferenced image with colors of grid cell values over a surface
+# create a georeferenced image with colors of grid cell values along a surface
 # v1.0 2023/07 paulo.ernesto
+# Copyright 2023 Vale
+# License: Apache 2.0
+# https://github.com/pemn/vtk_grid_to_raster
 '''
-usage: $0 input_grid*vtk variable:input_grid lito_rgb*xlsx surface*vtk output*png,tif display@
+usage: $0 input_grid*vtk variable:input_grid lito_rgb*xlsx surface*vtk output*png,tif display@ geotif_epsg=3395,29191,29192,29193,31981,31982,31983
 '''
 import sys, os
 import numpy as np
 import pandas as pd
 # import modules from a pyz (zip) file with same name as scripts
 sys.path.insert(0, os.path.splitext(sys.argv[0])[0] + '.pyz')
-from PIL import Image, ImageColor
 
 from _gui import usage_gui
 
-from pd_vtk import pv_read, vtk_Voxel, Raytracer, vtk_bounds_to_2d_bb
+from pd_vtk import pv_read, vtk_Voxel, Raytracer
 
 class AutoRGB(dict):
   _dc = np.ones(4)
@@ -34,7 +36,7 @@ class AutoRGB(dict):
     #  return self.get(*key, self._dc)
     return self.get(key, self._dc)
 
-def vtk_grid_to_geotif(input_grid, variable, lito_rgb, surface, output, display):
+def vtk_grid_to_geotif(input_grid, variable, lito_rgb, surface, output, display, epsg = None):
   data_axis = 0
   meshdist = 'meshdist'
   auto_rgb = AutoRGB()
@@ -61,7 +63,7 @@ def vtk_grid_to_geotif(input_grid, variable, lito_rgb, surface, output, display)
   raster = np.ndarray((g2d.shape[0], g2d.shape[1], 4), dtype='uint8')
   for ri, rd in np.ndenumerate(g2d):
     raster[ri] = auto_rgb(rd)
-  #raster = np.moveaxis(auto_rgb(g2d), 0, -1)
+
   raster = np.flip(raster, 0)
 
   if not output:
@@ -70,12 +72,13 @@ def vtk_grid_to_geotif(input_grid, variable, lito_rgb, surface, output, display)
     s = np.concatenate((np.reshape(np.transpose(np.indices(g2d.shape), np.arange(g2d.ndim,-1,-1)), (g2d.size, g2d.ndim)), np.reshape(g2d, (g2d.size,1))), 1)
     np.savetxt(output, s, delimiter=',', header=f'i,j,{variable}',comments='')
   elif output.lower().endswith('png'):
+    from PIL import Image, ImageColor
     img = Image.fromarray(raster)
     img.save(output)
   elif output.lower().endswith('f'):
     from vulcan_save_tri import gdal_save_geotiff
-    bb = vtk_bounds_to_2d_bb(grid.bounds)
-    gdal_save_geotiff(np.moveaxis(raster, 2, 0), bb, output)
+    bb = np.take(grid.bounds, [[0, 2, 4], [1, 2, 4], [1, 3, 4], [0, 3, 4]])
+    gdal_save_geotiff(np.moveaxis(raster, 2, 0), bb, output, epsg)
 
   if int(display):
     import matplotlib.pyplot as plt

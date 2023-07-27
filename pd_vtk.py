@@ -1232,8 +1232,8 @@ class Raytracer(object):
     return self._raytrace_point(mesh, v)
 
 def vtk_bounds_to_2d_bb(bounds):
-  #s = [[0,2],[1,2],[1,3],[0,3]]
-  s = np.stack([np.array([0,1,1,0]), np.repeat(np.arange(2,4),2), np.full(4,4)], 1)
+  # s = [[0, 2, 5], [1, 2, 5], [1, 3, 5], [0, 3, 5]] # with extra steps!
+  s = np.add(np.unpackbits(np.arange(97, -49, -49, dtype=np.uint8).reshape((1,3)), 0, 4), np.arange(0,5,2).reshape((1,3)))
   return np.take(bounds, s)
 
 

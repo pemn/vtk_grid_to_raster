@@ -168,9 +168,14 @@ def vulcan_save_ireg(nodes, faces, texture, output_path, rows_cols = None):
   open(output_path, 'w').write(json.dumps(spec_json, sort_keys=True, indent=4).replace(': NaN', ' = u').replace('": ', '" = '))
 
 # 29193
-def gdal_save_geotiff(texture, xyz, output_path, epsg = 29193):
+def gdal_save_geotiff(texture, xyz, output_path, epsg = None):
   import osgeo.gdal as gdal
   import osgeo.osr as osr
+  if not epsg:
+    # WGS 84 / World Mercator
+    epsg = 3395
+  elif isinstance(epsg, str):
+    epsg = int(epsg)
   
   driver = gdal.GetDriverByName("GTiff")
   gdt = gdal.GDT_Byte
